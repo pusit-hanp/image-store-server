@@ -43,7 +43,11 @@ const stripe = new Stripe(process.env.STRIPE_S_KEYS);
 
 app.use(express.static('public'));
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: ['http://localhost:3000', 'https://image-store-app.onrender.com'],
+  })
+);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
