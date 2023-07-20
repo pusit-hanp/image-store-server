@@ -88,8 +88,8 @@ app.post('/payment/create-checkout-session', async (req, res) => {
   // console.log(upload);
 
   const lineItems = product.map((image) => {
-    const imageURL = `http://localhost:${PORT}/images/raws/${path.basename(
-      image.imageLocation
+    const imageURL = `https://image-store-app-api.onrender.com/images/raws/${path.basename(
+      item.imageLocation
     )}`;
 
     console.log(imageURL);
@@ -113,8 +113,8 @@ app.post('/payment/create-checkout-session', async (req, res) => {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
-    success_url: `http://localhost:${PORT}/success`,
-    cancel_url: `http://localhost:${PORT}/cancel`,
+    success_url: `https://image-store-app.onrender.com/success`,
+    cancel_url: `https://image-store-app.onrender.com/cancel`,
   });
   res.json({ id: session.id });
 });
@@ -313,7 +313,9 @@ app.get('/api/images/:imageId', async (req, res) => {
   const image = await db.collection('images').findOne({ _id: id });
 
   if (image) {
-    const imageURL = `/images/raws/${path.basename(image.imageLocation)}`;
+    const imageURL = `https://image-store-app-api.onrender.com/images/raws/${path.basename(
+      image.imageLocation
+    )}`;
     console.log(imageURL);
     const updatedImage = { ...image, imageLocation: imageURL };
 
