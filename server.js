@@ -219,7 +219,9 @@ app.get('/api/images', async (req, res) => {
 
     // Update imageLocation to the image file path
     currentItems = currentItems.map((item) => {
-      const imageURL = `/images/raws/${path.basename(item.imageLocation)}`;
+      const imageURL = `https://image-store-app-api.onrender.com/images/raws/${path.basename(
+        item.imageLocation
+      )}`;
       return { ...item, imageLocation: imageURL };
     });
 
