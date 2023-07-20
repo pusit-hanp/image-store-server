@@ -71,7 +71,7 @@ app.post(
   }
 );
 
-app.post('/payment/create-checkout-session', async (req, res) => {
+app.post('/api/payment/create-checkout-session', async (req, res) => {
   const { product } = req.body;
   console.log(product);
 
@@ -88,11 +88,6 @@ app.post('/payment/create-checkout-session', async (req, res) => {
   // console.log(upload);
 
   const lineItems = product.map((image) => {
-    const imageURL = `https://image-store-app-api.onrender.com/images/raws/${path.basename(
-      item.imageLocation
-    )}`;
-
-    console.log(imageURL);
     return {
       price_data: {
         currency: 'cad',
@@ -100,7 +95,7 @@ app.post('/payment/create-checkout-session', async (req, res) => {
         product_data: {
           name: image.title,
           description: image.description,
-          images: [imageURL],
+          images: [image.imageLocation],
         },
       },
       quantity: 1,
