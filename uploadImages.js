@@ -26,7 +26,7 @@ function getRandomPrice(min, max) {
   return (Math.random() * (max - min) + min).toFixed(2);
 }
 
-for (var i = 1; i <= 99; i++) {
+for (var i = 1; i <= 25; i++) {
   var image = Object.assign({}, imageTemplate);
   image.title += ' ' + i;
   image.description = image.description;
