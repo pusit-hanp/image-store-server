@@ -167,7 +167,7 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
 //Stripe webhook
 const endpointSecret = process.env.STRIPE_WEBHOOK;
 console.log("test1");
-app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+app.post('/success', express.raw({type: 'application/json'}), (request, response) => {
   const sig = request.headers['stripe-signature'];
   console.log("test2");
   let event;
@@ -200,6 +200,9 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
   console.log("test6");
   response.send();
 });
+
+app.listen(4242, '0.0.0.0', () => console.log('Running on port 4242'));
+app.listen(8080, '0.0.0.0', () => console.log('Porta 8080'));
 
 // Define a route for handling user registration
 app.post('/api/user/register', async (req, res) => {
