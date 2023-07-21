@@ -99,8 +99,8 @@ app.post(
         price: parseFloat(req.body.price), // Convert price string to a floating-point number
       };
 
-      // Save the image details to the 'images' collection in MongoDB
-      //await db.collection('images').insertOne(imageDetails);
+      //Save the image details to the 'images' collection in MongoDB
+      await db.collection('images').insertOne(imageDetails);
 
       res.sendStatus(200);
     } catch (error) {
