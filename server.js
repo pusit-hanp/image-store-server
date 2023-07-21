@@ -158,8 +158,8 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
-    success_url: `https://image-store-app.onrender.com/success`,
-    cancel_url: `https://image-store-app.onrender.com/cancel`,
+    success_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/success`:`localhost3000/success`,
+    cancel_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/cancel`:`localhost3000/cancel`,
   });
   res.json({ id: session.id });
 });
@@ -201,8 +201,8 @@ app.post('/success', express.raw({type: 'application/json'}), (request, response
   response.send();
 });
 
-app.listen(4242, '0.0.0.0', () => console.log('Running on port 4242'));
-app.listen(8080, '0.0.0.0', () => console.log('Porta 8080'));
+//app.listen(4242, '0.0.0.0', () => console.log('Running on port 4242'));
+//app.listen(8080, '0.0.0.0', () => console.log('Porta 8080'));
 
 // Define a route for handling user registration
 app.post('/api/user/register', async (req, res) => {
