@@ -166,15 +166,21 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
 
 //Stripe webhook
 const endpointSecret = process.env.STRIPE_WEBHOOK;
+console.log("test1");
 app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
   const sig = request.headers['stripe-signature'];
+  console.log("test2");
   let event;
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+    console.log("test3");
   } catch (err) {
     response.status(400).send(`Webhook Error: ${err.message}`);
+    console.log("test4");
     return;
   }
+
+  console.log("test5");
 
   switch (event.type) {
     case 'invoice.paid':
@@ -183,11 +189,15 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
       break;
     case 'payment_intent.succeeded':
       const paymentIntentSucceeded = event.data.object;
+      console.log("Payment intent");
+      console.log(`PaymentIntent for ${paymentIntent.amount} was successful!`);
       console.log(paymentIntentSucceeded);
       break;
     default:
+      cosole.log("default");
       console.log(`Unhandled event type ${event.type}`);
   }
+  console.log("test6");
   response.send();
 });
 
