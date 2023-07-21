@@ -62,10 +62,11 @@ app.use(
 const storage = multer.diskStorage({
   destination: path.resolve('public/images/raws'), // Use path.resolve() to create an absolute path
   filename: function (req, file, cb) {
+    console.log(req.body);
     const uniqueSuffix = Date.now();
     cb(
       null,
-      file.originalname + '-' + uniqueSuffix + path.extname(file.originalname)
+      req.body.title + '-' + uniqueSuffix + path.extname(file.originalname)
     );
   },
 });
@@ -99,7 +100,7 @@ app.post(
       };
 
       // Save the image details to the 'images' collection in MongoDB
-      await db.collection('images').insertOne(imageDetails);
+      //await db.collection('images').insertOne(imageDetails);
 
       res.sendStatus(200);
     } catch (error) {
