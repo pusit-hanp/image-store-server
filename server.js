@@ -1,6 +1,6 @@
 import fs from 'fs';
 import admin from 'firebase-admin';
-import express from 'express';
+import express, {request, response} from 'express';
 import 'dotenv/config';
 import { db, connectToDb } from './db.js';
 import Stripe from 'stripe';
@@ -162,6 +162,33 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     cancel_url: `https://image-store-app.onrender.com/cancel`,
   });
   res.json({ id: session.id });
+});
+
+//Stripe webhook
+const endpointSecret = process.env.STRIPE_WEBHOOK;
+app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+  const sig = request.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+  } catch (err) {
+    response.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
+  switch (event.type) {
+    case 'invoice.paid':
+      const invoicePaid = event.data.object;
+      console.log(invoicePaid);
+      break;
+    case 'payment_intent.succeeded':
+      const paymentIntentSucceeded = event.data.object;
+      console.log(paymentIntentSucceeded);
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+  response.send();
 });
 
 // Define a route for handling user registration
