@@ -59,32 +59,31 @@ app.post('/webhook', express.raw({type: 'application/json'}), async (request, re
     return;
   }
 
-  let price;
   let email;
-  let paymentIntent;
-  let images;
+  let status = "Completed";
+  let transId;
 
   switch (event.type) {
     case 'payment_intent.succeeded':
       const paymentIntentSucceeded = event.data.object;
-      console.log("Payment intent");
-      console.log(event.data.object.id);
+      //console.log("Payment intent");
+      //console.log(event.data.object.id);
+      //console.log(paymentIntentSucceeded);
       break;
     case 'checkout.session.completed':
       const checkoutSessionCompleted = event.data.object;
-      console.log("Checkout session completed");
-      price = parseFloat(checkoutSessionCompleted.amount_total / 100);
+      //console.log("Checkout session completed");
+      //console.log(checkoutSessionCompleted);
       email = checkoutSessionCompleted.customer_details.email;
-      paymentIntent = checkoutSessionCompleted.payment_intent;
-      const transaction = {
-        "transactionId": paymentIntent,
-        "buyerEmail": email,
-        "price": price,
-        "date": new Date(),
-        "purchasedImages": [],
-        "status": "Completed"
-      }
-      await db.collection('transactions').insertOne(transaction);
+      transId = checkoutSessionCompleted.id;
+      //console.log("transId");
+      //console.log(transId);
+      await db.collection('transactions').findOneAndUpdate({ transactionId: transId }, {
+        $set: {
+          ...(email && {email}),
+          ...(status && {status}),
+        }
+      }, {returnOriginal: false});
       break;
     default:
       console.log("default");
@@ -212,6 +211,23 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     success_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/success`:`http://localhost:3000/success`,
     cancel_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/cancel`:`http://localhost:3000/cancel`,
   });
+  //console.log("Checkout session when click checkout button");
+  //console.log(session);
+
+  //console.log("display images");
+  //console.log(product._id);
+
+  const imageIDs = product.map(item => item._id);
+
+  const newTransaction = {
+    "transactionId": session.id,
+    "price": parseFloat(session.amount_subtotal / 100),
+    "date": new Date(),
+    "purchasedImages": imageIDs,
+    "status": "pending payment"
+  }
+  await db.collection('transactions').insertOne(newTransaction);
+
   res.json({ id: session.id });
 });
 
