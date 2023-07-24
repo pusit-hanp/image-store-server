@@ -42,6 +42,57 @@ const app = express();
 const stripe = new Stripe(process.env.STRIPE_S_KEYS);
 
 app.use(express.static('public'));
+
+//Stripe webhook
+const endpointSecret = process.env.STRIPE_WEBHOOK;
+app.post('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
+  const sig = request.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+    console.log("Webhook verified");
+  } catch (err) {
+    console.log(`Webhook error: ${err.message}`);
+    response.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
+  let price;
+  let email;
+  let paymentIntent;
+  let images;
+
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntentSucceeded = event.data.object;
+      console.log("Payment intent");
+      console.log(event.data.object.id);
+      break;
+    case 'checkout.session.completed':
+      const checkoutSessionCompleted = event.data.object;
+      console.log("Checkout session completed");
+      price = parseFloat(checkoutSessionCompleted.amount_total / 100);
+      email = checkoutSessionCompleted.customer_details.email;
+      paymentIntent = checkoutSessionCompleted.payment_intent;
+      const transaction = {
+        "transactionId": paymentIntent,
+        "buyerEmail": email,
+        "price": price,
+        "date": new Date(),
+        "purchasedImages": [],
+        "status": "Completed"
+      }
+      await db.collection('transactions').insertOne(transaction);
+      break;
+    default:
+      console.log("default");
+      console.log(`Unhandled event type ${event.type}`);
+  }
+  response.send();
+});
+
 app.use(express.json());
 app.use(
   cors({
@@ -152,57 +203,17 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     };
   });
 
-  console.log(lineItems);
+  //console.log(lineItems);
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
-    success_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/success`:`localhost3000/success`,
-    cancel_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/cancel`:`localhost3000/cancel`,
+    success_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/success`:`http://localhost:3000/success`,
+    cancel_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/cancel`:`http://localhost:3000/cancel`,
   });
   res.json({ id: session.id });
 });
-
-//Stripe webhook
-const endpointSecret = process.env.STRIPE_WEBHOOK;
-console.log("test1");
-app.post('/success', express.raw({type: 'application/json'}), (request, response) => {
-  const sig = request.headers['stripe-signature'];
-  console.log("test2");
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-    console.log("test3");
-  } catch (err) {
-    response.status(400).send(`Webhook Error: ${err.message}`);
-    console.log("test4");
-    return;
-  }
-
-  console.log("test5");
-
-  switch (event.type) {
-    case 'invoice.paid':
-      const invoicePaid = event.data.object;
-      console.log(invoicePaid);
-      break;
-    case 'payment_intent.succeeded':
-      const paymentIntentSucceeded = event.data.object;
-      console.log("Payment intent");
-      console.log(`PaymentIntent for ${paymentIntent.amount} was successful!`);
-      console.log(paymentIntentSucceeded);
-      break;
-    default:
-      cosole.log("default");
-      console.log(`Unhandled event type ${event.type}`);
-  }
-  console.log("test6");
-  response.send();
-});
-
-//app.listen(4242, '0.0.0.0', () => console.log('Running on port 4242'));
-//app.listen(8080, '0.0.0.0', () => console.log('Porta 8080'));
 
 // Define a route for handling user registration
 app.post('/api/user/register', async (req, res) => {
