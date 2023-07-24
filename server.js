@@ -217,7 +217,7 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
   //console.log("display images");
   //console.log(product._id);
 
-  const imageIDs = product.map(item => item._id);
+  const imageIDs = product.map(item => new ObjectId(item._id));
 
   const newTransaction = {
     "transactionId": session.id,
