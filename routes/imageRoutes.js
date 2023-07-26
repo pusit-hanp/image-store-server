@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { ObjectId } from 'mongodb';
 import { db } from '../db.js'; // Assuming db.js contains the database connection logic
+import Jimp from 'jimp';
 
 const router = express.Router();
 
