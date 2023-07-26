@@ -2,9 +2,9 @@ var imageTemplate = {
   title: 'Image',
   description: 'test description',
   seller: 12345678,
+  likes: 0,
   views: 500,
   status: 'Active',
-  imageLocation: '',
   dateCreated: new Date(),
   dateEdited: new Date(),
 };
@@ -25,7 +25,7 @@ function getRandomPrice(min, max) {
   return (Math.random() * (max - min) + min).toFixed(2);
 }
 
-for (var i = 1; i <= 100; i++) {
+for (var i = 1; i <= 40; i++) {
   var image = Object.assign({}, imageTemplate);
   image.title += ' ' + i;
   image.description = image.description;
@@ -34,6 +34,7 @@ for (var i = 1; i <= 100; i++) {
 
   // Update imageLocation based on the tag value
   image.imageLocation = image.tags[0] + '.jpeg';
+  image.watermarkedLocation = image.tags[0] + '.jpeg';
 
   images.push(image);
 }
