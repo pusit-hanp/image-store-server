@@ -33,8 +33,7 @@ for (var i = 1; i <= 100; i++) {
   image.price = getRandomPrice(0.99, 20);
 
   // Update imageLocation based on the tag value
-  var tagValue = image.tags[0].replace(/\s+/g, ''); // Remove spaces from the tag
-  image.imageLocation = tagValue + '.jpeg';
+  image.imageLocation = image.tags[0] + '.jpeg';
 
   images.push(image);
 }
