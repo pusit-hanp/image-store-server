@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
         likes: item.likes,
         views: item.views,
         status: item.status,
-        imgLocation: imageURL,
+        imageLocation: imageURL,
         tags: item.tags,
         price: item.price,
       };
@@ -105,7 +105,7 @@ router.get('/:imageId', async (req, res) => {
       likes: image.likes,
       views: image.views,
       status: image.status,
-      imgLocation: imageURL,
+      imageLocation: imageURL,
       tags: image.tags,
       price: image.price,
     };
