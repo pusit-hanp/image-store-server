@@ -150,16 +150,16 @@ app.post(
       // Calculate the aspect ratio of the original image
       const aspectRatio = image.bitmap.width / image.bitmap.height;
 
-      // Calculate the new width and height to fit inside a 800 by 800 box while maintaining aspect ratio
+      // Calculate the new width and height to fit inside a 600 by 600 box while maintaining aspect ratio
       let newWidth, newHeight;
       if (aspectRatio >= 1) {
         // Landscape or square image
-        newWidth = 800;
-        newHeight = 800 / aspectRatio;
+        newWidth = 600;
+        newHeight = 600 / aspectRatio;
       } else {
         // Portrait image
-        newWidth = 800 * aspectRatio;
-        newHeight = 800;
+        newWidth = 600 * aspectRatio;
+        newHeight = 600;
       }
 
       // Resize the image to fit inside the 800 by 800 box
