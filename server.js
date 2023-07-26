@@ -47,52 +47,60 @@ app.use(express.static('public'));
 
 //Stripe webhook
 const endpointSecret = process.env.STRIPE_WEBHOOK;
-app.post('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
-  const sig = request.headers['stripe-signature'];
+app.post(
+  '/webhook',
+  express.raw({ type: 'application/json' }),
+  async (request, response) => {
+    const sig = request.headers['stripe-signature'];
 
-  let event;
+    let event;
 
-  try {
-    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-    console.log("Webhook verified");
-  } catch (err) {
-    console.log(`Webhook error: ${err.message}`);
-    response.status(400).send(`Webhook Error: ${err.message}`);
-    return;
+    try {
+      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+      console.log('Webhook verified');
+    } catch (err) {
+      console.log(`Webhook error: ${err.message}`);
+      response.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+
+    let email;
+    let status = 'Completed';
+    let transId;
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntentSucceeded = event.data.object;
+        //console.log("Payment intent");
+        //console.log(event.data.object.id);
+        //console.log(paymentIntentSucceeded);
+        break;
+      case 'checkout.session.completed':
+        const checkoutSessionCompleted = event.data.object;
+        //console.log("Checkout session completed");
+        //console.log(checkoutSessionCompleted);
+        email = checkoutSessionCompleted.customer_details.email;
+        transId = checkoutSessionCompleted.id;
+        //console.log("transId");
+        //console.log(transId);
+        await db.collection('transactions').findOneAndUpdate(
+          { transactionId: transId },
+          {
+            $set: {
+              ...(email && { email }),
+              ...(status && { status }),
+            },
+          },
+          { returnOriginal: false }
+        );
+        break;
+      default:
+        console.log('default');
+        console.log(`Unhandled event type ${event.type}`);
+    }
+    response.send();
   }
-
-  let email;
-  let status = "Completed";
-  let transId;
-
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntentSucceeded = event.data.object;
-      //console.log("Payment intent");
-      //console.log(event.data.object.id);
-      //console.log(paymentIntentSucceeded);
-      break;
-    case 'checkout.session.completed':
-      const checkoutSessionCompleted = event.data.object;
-      //console.log("Checkout session completed");
-      //console.log(checkoutSessionCompleted);
-      email = checkoutSessionCompleted.customer_details.email;
-      transId = checkoutSessionCompleted.id;
-      //console.log("transId");
-      //console.log(transId);
-      await db.collection('transactions').findOneAndUpdate({ transactionId: transId }, {
-        $set: {
-          ...(email && {email}),
-          ...(status && {status}),
-        }
-      }, {returnOriginal: false});
-      break;
-    default:
-      console.log("default");
-      console.log(`Unhandled event type ${event.type}`);
-  }
-  response.send();
-});
+);
 
 app.use(express.json());
 app.use(
@@ -282,8 +290,14 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
-    success_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/success`:`http://localhost:3000/success`,
-    cancel_url: (process.env.NODE_ENV === 'production')? `https://image-store-app.onrender.com/cancel`:`http://localhost:3000/cancel`,
+    success_url:
+      process.env.NODE_ENV === 'production'
+        ? `https://image-store-app.onrender.com/success`
+        : `http://localhost:3000/success`,
+    cancel_url:
+      process.env.NODE_ENV === 'production'
+        ? `https://image-store-app.onrender.com/cancel`
+        : `http://localhost:3000/cancel`,
   });
   //console.log("Checkout session when click checkout button");
   //console.log(session);
@@ -291,15 +305,15 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
   //console.log("display images");
   //console.log(product._id);
 
-  const imageIDs = product.map(item => new ObjectId(item._id));
+  const imageIDs = product.map((item) => new ObjectId(item._id));
 
   const newTransaction = {
-    "transactionId": session.id,
-    "price": parseFloat(session.amount_subtotal / 100),
-    "date": new Date(),
-    "purchasedImages": imageIDs,
-    "status": "pending payment"
-  }
+    transactionId: session.id,
+    price: parseFloat(session.amount_subtotal / 100),
+    date: new Date(),
+    purchasedImages: imageIDs,
+    status: 'pending payment',
+  };
   await db.collection('transactions').insertOne(newTransaction);
 
   res.json({ id: session.id });
@@ -379,16 +393,29 @@ app.get('/api/images', async (req, res) => {
   const currentPage = req.query.page;
   const imagesPerPage = req.query.perPage;
   const isAll = req.query.status === 'All';
+  const category = req.query.cat;
 
   const indexOfLastItem = currentPage * imagesPerPage;
   const indexOfFirstItem = indexOfLastItem - imagesPerPage;
   try {
     // Get images imformation from database
     let images;
-    if (isAll) {
+
+    if (isAll && !category) {
       images = await db.collection('images').find().toArray();
-    } else {
+    } else if (isAll && category) {
+      images = await db
+        .collection('images')
+        .find({ tags: { $in: [category] } })
+        .toArray();
+    } else if (!isAll && category) {
       // if not all Get only Active images from database
+      images = await db
+        .collection('images')
+        .find({ status: 'Active', tags: { $in: [category] } })
+        .toArray();
+    } else {
+      // if not all and no category Get only Active images from database
       images = await db
         .collection('images')
         .find({ status: 'Active' })
