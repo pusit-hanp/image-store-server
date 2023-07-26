@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
       const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
         item.watermarkedLocation
       )}`;
-
+      console.log(imageURL);
       const returnImage = {
         _id: item._id,
         title: item.title,
