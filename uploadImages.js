@@ -34,8 +34,8 @@ for (var i = 1; i <= 40; i++) {
   image.price = getRandomPrice(0.99, 20);
 
   // Update imageLocation based on the tag value
-  image.imageLocation = image.tags[0] + '.jpeg';
-  image.watermarkedLocation = image.tags[0] + '.jpeg';
+  image.imageLocation = image.tags[0].replace(/ /g, '-') + '.jpeg';
+  image.watermarkedLocation = image.tags[0].replace(/ /g, '-') + '.jpeg';
 
   images.push(image);
 }

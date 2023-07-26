@@ -88,10 +88,7 @@ app.post(
 app.post('/api/payment/create-checkout-session', async (req, res) => {
   const { product } = req.body;
 
-  console.log('product', product);
-
   const lineItems = product.map((image) => {
-    console.log('link', image.imageLocation);
     return {
       price_data: {
         currency: 'cad',
