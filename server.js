@@ -212,11 +212,11 @@ app.post(
         seller: '', // Seller information here
         likes: 0, // Initialize the likes to 0
         views: 0, // Initialize the views to 0
-        status: 'Available', // Assuming the default status is 'Available'
+        status: 'Active', // Assuming the default status is 'Available'
         // imageLocation: req.file.path, // Using absolute path
         imageLocation: `./images/raws/${req.file.filename}`, // Using relative path
         watermarkedLocation: `./images/WM/${watermarkedFileName}`, // Using relative path for watermarked image
-        watermarkedName: watermarkedFileName, // Store watermarked filename separately
+        //watermarkedName: watermarkedFileName, // Store watermarked filename separately
         dateCreated: new Date(),
         dateEdited: new Date(),
         tags: req.body.tags.split(','), // Convert tags string to an array
