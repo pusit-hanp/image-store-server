@@ -8,7 +8,6 @@ import path from 'path';
 import { ObjectId } from 'mongodb';
 import cors from 'cors';
 import multer from 'multer';
-//import sharp from 'sharp'; // Import sharp library
 import Jimp from 'jimp'; // Import Jimp library
 
 import { fileURLToPath } from 'url';
@@ -159,15 +158,19 @@ app.post(
       const aspectRatio = image.bitmap.width / image.bitmap.height;
 
       // Calculate the new width and height to fit inside a 600 by 600 box while maintaining aspect ratio
+
+      const DISPLAY_HEIGHT = 600;
+      const DISPLAY_WIDTH = 600;
+
       let newWidth, newHeight;
       if (aspectRatio >= 1) {
         // Landscape or square image
-        newWidth = 600;
-        newHeight = 600 / aspectRatio;
+        newWidth = DISPLAY_WIDTH;
+        newHeight = DISPLAY_WIDTH / aspectRatio;
       } else {
         // Portrait image
-        newWidth = 600 * aspectRatio;
-        newHeight = 600;
+        newWidth = DISPLAY_HEIGHT * aspectRatio;
+        newHeight = DISPLAY_HEIGHT;
       }
 
       // Resize the image to fit inside the 800 by 800 box
