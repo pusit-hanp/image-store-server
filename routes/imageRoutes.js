@@ -9,7 +9,6 @@ const router = express.Router();
 
 // Route for getting all images
 router.get('/', async (req, res) => {
-  console.log(req.query);
   // Extract the query parameters
   const currentPage = req.query.page;
   const imagesPerPage = req.query.perPage;
@@ -56,7 +55,6 @@ router.get('/', async (req, res) => {
       const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
         item.watermarkedLocation
       )}`;
-      console.log(imageURL);
       const returnImage = {
         _id: item._id,
         title: item.title,
@@ -91,7 +89,6 @@ router.get('/:imageId', async (req, res) => {
   // get selected image information from database
   const id = new ObjectId(imageId);
   const image = await db.collection('images').findOne({ _id: id });
-  console.log(image);
 
   if (image) {
     const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
@@ -142,7 +139,6 @@ router.post('/update', async (req, res) => {
     // Send a successful response
     res.sendStatus(200);
   } catch (error) {
-    console.error(error);
     res.status(500).send('An error occurred while updating the image');
   }
 });
