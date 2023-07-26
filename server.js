@@ -1,6 +1,6 @@
 import fs from 'fs';
 import admin from 'firebase-admin';
-import express, {request, response} from 'express';
+import express from 'express';
 import 'dotenv/config';
 import { db, connectToDb } from './db.js';
 import Stripe from 'stripe';
@@ -8,6 +8,8 @@ import path from 'path';
 import { ObjectId } from 'mongodb';
 import cors from 'cors';
 import multer from 'multer';
+//import sharp from 'sharp'; // Import sharp library
+import Jimp from 'jimp'; // Import Jimp library
 
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -98,32 +100,34 @@ app.use(
     origin: ['http://localhost:3000', 'https://image-store-app.onrender.com'],
   })
 );
-
-// if (process.env.NODE_ENV === 'production') {
-//   app.use(express.static(path.join(__dirname, '../client/build')));
-
-//   app.get(/^(?!\/api).+/, (req, res) => {
-//     res.sendFile(path.join(__dirname, '../client/build/index.html'));
-//   });
-// }
-// Serve static files from the "images" directory
-//app.use('/images', express.static(path.join(__dirname, '../public/images')));
+///////////////////////////////////////////////////////////////
 
 const storage = multer.diskStorage({
   destination: path.resolve('public/images/raws'), // Use path.resolve() to create an absolute path
   filename: function (req, file, cb) {
     console.log(req.body);
-    const uniqueSuffix = Date.now();
-    cb(
-      null,
-      req.body.title + '-' + uniqueSuffix + path.extname(file.originalname)
-    );
+    const uniqueSuffix = Date.now() + '-' + Math.floor(1e3 + Math.random() * 9*1e3);
+    cb(null, 'OR' + '-' + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
 const upload = multer({ storage: storage });
 
 /////////////////////////////////////////////////////////////////
+const watermarkText = 'Image Store';
+const watermarkFontSize = 40;
+const watermarkOffsetY = 50; // Adjust this value to control the offset
+
+// Function to add a watermark at a specific position on the image
+const addWatermark = async (image, watermarkText, font, positionX, positionY) => {
+  const centerX = image.bitmap.width / 2 + positionX;
+  const centerY = image.bitmap.height / 2 + positionY;
+  image.print(font, centerX, centerY, watermarkText, Jimp.HORIZONTAL_ALIGN_CENTER | Jimp.VERTICAL_ALIGN_MIDDLE);
+};
+
+
+/////////////////////////////////////////////////////////////////
+
 app.post(
   '/api/image/upload',
   upload.single('imageFile'),
@@ -131,6 +135,75 @@ app.post(
     try {
       // console.log(req.file); // Check if the file details are logged correctly
       // console.log(req.body); // Check other form fields
+
+      // Get the uploaded image file path
+      const imageFilePath = req.file.path;
+      const originalImageName = req.file.filename;
+      const originalImageExt = path.extname(originalImageName);
+
+      // Generate the watermarked image and save it to /public/images/WM
+      const watermarkedFileName = `WM-${Date.now()}-${Math.floor(1e3 + Math.random() * 9*1e3)}${originalImageExt}`;
+      const watermarkedFilePath = path.resolve('public/images/wm', watermarkedFileName);
+      // Read the input image using Jimp
+      const image = await Jimp.read(imageFilePath);
+
+      // Calculate the aspect ratio of the original image
+      const aspectRatio = image.bitmap.width / image.bitmap.height;
+
+      // Calculate the new width and height to fit inside a 800 by 800 box while maintaining aspect ratio
+      let newWidth, newHeight;
+      if (aspectRatio >= 1) {
+        // Landscape or square image
+        newWidth = 800;
+        newHeight = 800 / aspectRatio;
+      } else {
+        // Portrait image
+        newWidth = 800 * aspectRatio;
+        newHeight = 800;
+      }
+
+      // Resize the image to fit inside the 800 by 800 box
+      image.resize(newWidth, newHeight, Jimp.RESIZE_INSIDE);
+
+      // Load the font for watermark text
+      const font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+
+      // Add the main watermark at the center of the image
+      const hundred = 100;
+      addWatermark(image, watermarkText, font, 0, 0);
+
+      // Add watermarks at different positions
+      addWatermark(image, watermarkText, font, 0, 0);
+      addWatermark(image, watermarkText, font, 1*hundred, 1*hundred);
+      addWatermark(image, watermarkText, font, -1*hundred, -1*hundred);
+      addWatermark(image, watermarkText, font, -1*hundred, 1*hundred);
+      addWatermark(image, watermarkText, font, 1*hundred, -1*hundred);
+      addWatermark(image, watermarkText, font, 2*hundred, 2*hundred);
+      addWatermark(image, watermarkText, font, -2*hundred, -2*hundred);
+      addWatermark(image, watermarkText, font, -2*hundred, 2*hundred);
+      addWatermark(image, watermarkText, font, 2*hundred, -2*hundred);
+      addWatermark(image, watermarkText, font, 3*hundred, 3*hundred);
+      addWatermark(image, watermarkText, font, -3*hundred, -3*hundred);
+      addWatermark(image, watermarkText, font, -3*hundred, 3*hundred);
+      addWatermark(image, watermarkText, font, 3*hundred, -3*hundred);
+      addWatermark(image, watermarkText, font, 2*hundred, 0);
+      addWatermark(image, watermarkText, font, -2*hundred, 0);
+      addWatermark(image, watermarkText, font, 0, 2*hundred);
+      addWatermark(image, watermarkText, font, 0, -2*hundred);
+      addWatermark(image, watermarkText, font, -3*hundred, 1*hundred);
+      addWatermark(image, watermarkText, font, -3*hundred, -1*hundred);
+      addWatermark(image, watermarkText, font, -1*hundred, 3*hundred);
+      addWatermark(image, watermarkText, font, 1*hundred, 3*hundred);
+      addWatermark(image, watermarkText, font, 3*hundred, 1*hundred);
+      addWatermark(image, watermarkText, font, 3*hundred, -1*hundred);
+      addWatermark(image, watermarkText, font, 1*hundred, -3*hundred);
+      addWatermark(image, watermarkText, font, -1*hundred, 3*hundred);
+      // Save the watermarked image
+      await image.writeAsync(watermarkedFilePath);
+
+
+
+
 
       // Save image details to MongoDB
       const imageDetails = {
@@ -142,7 +215,8 @@ app.post(
         status: 'Available', // Assuming the default status is 'Available'
         // imageLocation: req.file.path, // Using absolute path
         imageLocation: `./images/raws/${req.file.filename}`, // Using relative path
-
+        watermarkedLocation: `./images/WM/${watermarkedFileName}`, // Using relative path for watermarked image
+        watermarkedName: watermarkedFileName, // Store watermarked filename separately
         dateCreated: new Date(),
         dateEdited: new Date(),
         tags: req.body.tags.split(','), // Convert tags string to an array
