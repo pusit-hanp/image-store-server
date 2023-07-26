@@ -87,7 +87,6 @@ app.post(
 
 app.post('/api/payment/create-checkout-session', async (req, res) => {
   const { product } = req.body;
-  console.log(product);
 
   const lineItems = product.map((image) => {
     return {
@@ -97,7 +96,7 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         product_data: {
           name: image.title,
           description: image.description,
-          images: [`image.imageLocation`],
+          images: [image.imageLocation],
         },
       },
       quantity: 1,
