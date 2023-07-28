@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { ObjectId } from 'mongodb';
 import imageRoutes from './routes/imageRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import nodemailer from "nodemailer";
 
 const app = express();
 
@@ -16,6 +17,14 @@ const stripe = new Stripe(process.env.STRIPE_S_KEYS);
 
 // Stripe Webhook
 const endpointSecret = process.env.STRIPE_WEBHOOK;
+
+const mailSetUp = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'imagecapstone@gmail.com',
+    pass: process.env.EMAIL_PASSWORD_NODEMAILER
+  }
+})
 app.post(
     '/webhook',
     express.raw({ type: 'application/json' }),
@@ -52,7 +61,7 @@ app.post(
           transId = checkoutSessionCompleted.id;
           //console.log("transId");
           //console.log(transId);
-          await db.collection('transactions').findOneAndUpdate(
+          const transactionInfo = await db.collection('transactions').findOneAndUpdate(
               { transactionId: transId },
               {
                 $set: {
@@ -62,6 +71,25 @@ app.post(
               },
               { returnOriginal: false }
           );
+
+          const imagePaths = transactionInfo.value.purchasedImages.map((image) => image.imageLocation);
+
+          const mailData = {
+            from: 'imagecapstone@gmail.com',
+            to: email,
+            subject: 'Image Store Order',
+            text: 'Thanks for your order! Enjoy your images',
+            attachments: createAttachments(imagePaths),
+          };
+
+          mailSetUp.sendMail(mailData, function(error, info){
+            if (error) {
+              console.log("Email error");
+              console.log(error);
+            } else {
+              console.log('Email response: ' + info.response);
+            }
+          })
           break;
         case 'checkout.session.expired':
           const checkoutSessionExpired = event.data.object;
@@ -139,21 +167,31 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         : `http://localhost:3000/cancel`,
   });
 
-  console.log("session info");
-  console.log(session);
-  const imageIDs = product.map((item) => new ObjectId(item._id));
+  //const imageIDs = product.map((item) => new ObjectId(item._id));
 
   const newTransaction = {
     transactionId: session.id,
     price: parseFloat(session.amount_subtotal / 100),
     date: new Date(),
-    purchasedImages: imageIDs,
+    purchasedImages: product,
     status: 'pending payment',
   };
   await db.collection('transactions').insertOne(newTransaction);
 
+  console.log("product");
+  console.log(product);
+
   res.json({ id: session.id });
 });
+
+function createAttachments(imagePaths) {
+  return imagePaths.map((path) => {
+    return {
+      filename: path.split('/').pop(),
+      path: path,
+    };
+  });
+}
 
 // Verify Firebase authtoken Middleware
 app.use(async (req, res, next) => {
