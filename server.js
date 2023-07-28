@@ -104,7 +104,6 @@ app.post(
           const checkoutSessionExpired = event.data.object;
           console.log("Checkout session expired");
           console.log(checkoutSessionExpired);
-          email = checkoutSessionExpired.customer_details.email;
           transId = checkoutSessionExpired.id;
           status = "canceled";
           //console.log("transId");
@@ -113,7 +112,6 @@ app.post(
               { transactionId: transId },
               {
                 $set: {
-                  ...(email && { email }),
                   ...(status && { status }),
                 },
               },
