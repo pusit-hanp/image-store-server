@@ -55,8 +55,8 @@ app.post(
           break;
         case 'checkout.session.completed':
           const checkoutSessionCompleted = event.data.object;
-          console.log("Checkout session completed");
-          console.log(checkoutSessionCompleted);
+          //console.log("Checkout session completed");
+          //console.log(checkoutSessionCompleted);
           email = checkoutSessionCompleted.customer_details.email;
           transId = checkoutSessionCompleted.id;
           //console.log("transId");
@@ -72,7 +72,9 @@ app.post(
               { returnOriginal: false }
           );
 
-          const imagePaths = transactionInfo.value.purchasedImages.map((image) => image.imageLocation);
+          const getImagesCursor = db.collection('images').find({ _id: { $in: transactionInfo.value.purchasedImages } });
+          const getImages = await getImagesCursor.toArray();
+          const imagePaths = getImages.map((image) => image.imageLocation);
 
           const mailData = {
             from: 'imagecapstone@gmail.com',
@@ -81,6 +83,9 @@ app.post(
             text: 'Thanks for your order! Enjoy your images',
             attachments: createAttachments(imagePaths),
           };
+
+          console.log("mailData");
+          console.log(mailData);
 
           mailSetUp.sendMail(mailData, function(error, info){
             if (error) {
@@ -167,19 +172,19 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         : `http://localhost:3000/cancel`,
   });
 
-  //const imageIDs = product.map((item) => new ObjectId(item._id));
+  const imageIDs = product.map((item) => new ObjectId(item._id));
 
   const newTransaction = {
     transactionId: session.id,
     price: parseFloat(session.amount_subtotal / 100),
     date: new Date(),
-    purchasedImages: product,
+    purchasedImages: imageIDs,
     status: 'pending payment',
   };
   await db.collection('transactions').insertOne(newTransaction);
 
-  console.log("product");
-  console.log(product);
+  //console.log("product");
+  //console.log(product);
 
   res.json({ id: session.id });
 });
@@ -187,8 +192,8 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
 function createAttachments(imagePaths) {
   return imagePaths.map((path) => {
     return {
-      filename: path.split('/').pop(),
-      path: path,
+      filename: path,
+      path: `${process.env.SERVER_URL}${process.env.IMAGE_RAW}${path}`,
     };
   });
 }
