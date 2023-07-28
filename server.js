@@ -23,8 +23,12 @@ const mailSetUp = nodemailer.createTransport({
   auth: {
     user: 'imagecapstone@gmail.com',
     pass: process.env.EMAIL_PASSWORD_NODEMAILER
-  }
+  },
+  fetch: {
+    timeout: 60000,
+  },
 })
+
 app.post(
     '/webhook',
     express.raw({ type: 'application/json' }),
