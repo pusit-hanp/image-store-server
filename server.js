@@ -12,6 +12,85 @@ const app = express();
 
 const PORT = process.env.PORT || 8080;
 
+const stripe = new Stripe(process.env.STRIPE_S_KEYS);
+
+// Stripe Webhook
+const endpointSecret = process.env.STRIPE_WEBHOOK;
+app.post(
+    '/webhook',
+    express.raw({ type: 'application/json' }),
+    async (request, response) => {
+      const sig = request.headers['stripe-signature'];
+
+      let event;
+
+      try {
+        event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+        console.log('Webhook verified');
+      } catch (err) {
+        console.log(`Webhook error: ${err.message}`);
+        response.status(400).send(`Webhook Error: ${err.message}`);
+        return;
+      }
+
+      let email;
+      let status = 'Completed';
+      let transId;
+
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          const paymentIntentSucceeded = event.data.object;
+          //console.log("Payment intent");
+          //console.log(event.data.object.id);
+          //console.log(paymentIntentSucceeded);
+          break;
+        case 'checkout.session.completed':
+          const checkoutSessionCompleted = event.data.object;
+          console.log("Checkout session completed");
+          console.log(checkoutSessionCompleted);
+          email = checkoutSessionCompleted.customer_details.email;
+          transId = checkoutSessionCompleted.id;
+          //console.log("transId");
+          //console.log(transId);
+          await db.collection('transactions').findOneAndUpdate(
+              { transactionId: transId },
+              {
+                $set: {
+                  ...(email && { email }),
+                  ...(status && { status }),
+                },
+              },
+              { returnOriginal: false }
+          );
+          break;
+        case 'checkout.session.expired':
+          const checkoutSessionExpired = event.data.object;
+          console.log("Checkout session expired");
+          console.log(checkoutSessionExpired);
+          email = checkoutSessionExpired.customer_details.email;
+          transId = checkoutSessionExpired.id;
+          status = "canceled";
+          //console.log("transId");
+          //console.log(transId);
+          await db.collection('transactions').findOneAndUpdate(
+              { transactionId: transId },
+              {
+                $set: {
+                  ...(email && { email }),
+                  ...(status && { status }),
+                },
+              },
+              { returnOriginal: false }
+          );
+          break;
+        default:
+          console.log('default');
+          console.log(`Unhandled event type ${event.type}`);
+      }
+      response.send();
+    }
+);
+
 // Middleware setup
 app.use(express.json());
 app.use(
@@ -26,64 +105,6 @@ app.use(express.static('public'));
 // This is a public sample test API key.
 // Don’t submit any personally identifiable information in requests made with this key.
 // Sign in to see your own test API key embedded in code samples.
-const stripe = new Stripe(process.env.STRIPE_S_KEYS);
-
-//Stripe webhook
-const endpointSecret = process.env.STRIPE_WEBHOOK;
-app.post(
-  '/webhook',
-  express.raw({ type: 'application/json' }),
-  async (request, response) => {
-    const sig = request.headers['stripe-signature'];
-
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-      console.log('Webhook verified');
-    } catch (err) {
-      console.log(`Webhook error: ${err.message}`);
-      response.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
-
-    let email;
-    let status = 'Completed';
-    let transId;
-
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntentSucceeded = event.data.object;
-        //console.log("Payment intent");
-        //console.log(event.data.object.id);
-        //console.log(paymentIntentSucceeded);
-        break;
-      case 'checkout.session.completed':
-        const checkoutSessionCompleted = event.data.object;
-        //console.log("Checkout session completed");
-        //console.log(checkoutSessionCompleted);
-        email = checkoutSessionCompleted.customer_details.email;
-        transId = checkoutSessionCompleted.id;
-        //console.log("transId");
-        //console.log(transId);
-        await db.collection('transactions').findOneAndUpdate(
-          { transactionId: transId },
-          {
-            $set: {
-              ...(email && { email }),
-              ...(status && { status }),
-            },
-          },
-          { returnOriginal: false }
-        );
-        break;
-      default:
-        console.log('default');
-        console.log(`Unhandled event type ${event.type}`);
-    }
-    response.send();
-  }
-);
 
 app.post('/api/payment/create-checkout-session', async (req, res) => {
   const { product } = req.body;
@@ -107,6 +128,7 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
+    expires_at: Math.floor(Date.now() / 1000) + 1800,
     success_url:
       process.env.NODE_ENV === 'production'
         ? `https://image-store-app.onrender.com/success`
@@ -117,6 +139,8 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         : `http://localhost:3000/cancel`,
   });
 
+  console.log("session info");
+  console.log(session);
   const imageIDs = product.map((item) => new ObjectId(item._id));
 
   const newTransaction = {
