@@ -7,7 +7,8 @@ import Stripe from 'stripe';
 import { ObjectId } from 'mongodb';
 import imageRoutes from './routes/imageRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import nodemailer from "nodemailer";
+import nodemailer from 'nodemailer';
+import path from 'path';
 
 const app = express();
 
@@ -22,108 +23,112 @@ const mailSetUp = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'imagecapstone@gmail.com',
-    pass: process.env.EMAIL_PASSWORD_NODEMAILER
+    pass: process.env.EMAIL_PASSWORD_NODEMAILER,
   },
   fetch: {
     timeout: 60000,
   },
-})
+});
 
 app.post(
-    '/webhook',
-    express.raw({ type: 'application/json' }),
-    async (request, response) => {
-      const sig = request.headers['stripe-signature'];
+  '/webhook',
+  express.raw({ type: 'application/json' }),
+  async (request, response) => {
+    const sig = request.headers['stripe-signature'];
 
-      let event;
+    let event;
 
-      try {
-        event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-        console.log('Webhook verified');
-      } catch (err) {
-        console.log(`Webhook error: ${err.message}`);
-        response.status(400).send(`Webhook Error: ${err.message}`);
-        return;
-      }
-
-      let email;
-      let status = 'Completed';
-      let transId;
-
-      switch (event.type) {
-        case 'payment_intent.succeeded':
-          const paymentIntentSucceeded = event.data.object;
-          //console.log("Payment intent");
-          //console.log(event.data.object.id);
-          //console.log(paymentIntentSucceeded);
-          break;
-        case 'checkout.session.completed':
-          const checkoutSessionCompleted = event.data.object;
-          //console.log("Checkout session completed");
-          //console.log(checkoutSessionCompleted);
-          email = checkoutSessionCompleted.customer_details.email;
-          transId = checkoutSessionCompleted.id;
-          //console.log("transId");
-          //console.log(transId);
-          const transactionInfo = await db.collection('transactions').findOneAndUpdate(
-              { transactionId: transId },
-              {
-                $set: {
-                  ...(email && { email }),
-                  ...(status && { status }),
-                },
-              },
-              { returnOriginal: false }
-          );
-
-          const getImagesCursor = db.collection('images').find({ _id: { $in: transactionInfo.value.purchasedImages } });
-          const getImages = await getImagesCursor.toArray();
-          const imagePaths = getImages.map((image) => image.imageLocation);
-
-          const mailData = {
-            from: 'imagecapstone@gmail.com',
-            to: email,
-            subject: 'Image Store Order',
-            text: 'Thanks for your order! Enjoy your images',
-            attachments: createAttachments(imagePaths),
-          };
-
-          console.log("mailData");
-          console.log(mailData);
-
-          mailSetUp.sendMail(mailData, function(error, info){
-            if (error) {
-              console.log("Email error");
-              console.log(error);
-            } else {
-              console.log('Email response: ' + info.response);
-            }
-          })
-          break;
-        case 'checkout.session.expired':
-          const checkoutSessionExpired = event.data.object;
-          console.log("Checkout session expired");
-          console.log(checkoutSessionExpired);
-          transId = checkoutSessionExpired.id;
-          status = "canceled";
-          //console.log("transId");
-          //console.log(transId);
-          await db.collection('transactions').findOneAndUpdate(
-              { transactionId: transId },
-              {
-                $set: {
-                  ...(status && { status }),
-                },
-              },
-              { returnOriginal: false }
-          );
-          break;
-        default:
-          console.log('default');
-          console.log(`Unhandled event type ${event.type}`);
-      }
-      response.send();
+    try {
+      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+      console.log('Webhook verified');
+    } catch (err) {
+      console.log(`Webhook error: ${err.message}`);
+      response.status(400).send(`Webhook Error: ${err.message}`);
+      return;
     }
+
+    let email;
+    let status = 'Completed';
+    let transId;
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntentSucceeded = event.data.object;
+        //console.log("Payment intent");
+        //console.log(event.data.object.id);
+        //console.log(paymentIntentSucceeded);
+        break;
+      case 'checkout.session.completed':
+        const checkoutSessionCompleted = event.data.object;
+        //console.log("Checkout session completed");
+        //console.log(checkoutSessionCompleted);
+        email = checkoutSessionCompleted.customer_details.email;
+        transId = checkoutSessionCompleted.id;
+        //console.log("transId");
+        //console.log(transId);
+        const transactionInfo = await db
+          .collection('transactions')
+          .findOneAndUpdate(
+            { transactionId: transId },
+            {
+              $set: {
+                ...(email && { email }),
+                ...(status && { status }),
+              },
+            },
+            { returnOriginal: false }
+          );
+
+        const getImagesCursor = db
+          .collection('images')
+          .find({ _id: { $in: transactionInfo.value.purchasedImages } });
+        const getImages = await getImagesCursor.toArray();
+        const imagePaths = getImages.map((image) => image.imageLocation);
+
+        const mailData = {
+          from: 'imagecapstone@gmail.com',
+          to: email,
+          subject: 'Image Store Order',
+          text: 'Thanks for your order! Enjoy your images',
+          attachments: createAttachments(imagePaths),
+        };
+
+        console.log('mailData');
+        console.log(mailData);
+
+        mailSetUp.sendMail(mailData, function (error, info) {
+          if (error) {
+            console.log('Email error');
+            console.log(error);
+          } else {
+            console.log('Email response: ' + info.response);
+          }
+        });
+        break;
+      case 'checkout.session.expired':
+        const checkoutSessionExpired = event.data.object;
+        console.log('Checkout session expired');
+        console.log(checkoutSessionExpired);
+        transId = checkoutSessionExpired.id;
+        status = 'canceled';
+        //console.log("transId");
+        //console.log(transId);
+        await db.collection('transactions').findOneAndUpdate(
+          { transactionId: transId },
+          {
+            $set: {
+              ...(status && { status }),
+            },
+          },
+          { returnOriginal: false }
+        );
+        break;
+      default:
+        console.log('default');
+        console.log(`Unhandled event type ${event.type}`);
+    }
+    response.send();
+  }
 );
 
 // Middleware setup
@@ -142,9 +147,18 @@ app.use(express.static('public'));
 // Sign in to see your own test API key embedded in code samples.
 
 app.post('/api/payment/create-checkout-session', async (req, res) => {
-  const { product } = req.body;
+  const { imageIds, email } = req.body;
+  const { authtoken } = req.headers;
 
-  const lineItems = product.map((image) => {
+  const images = await db
+    .collection('images')
+    .find({ _id: { $in: imageIds.map((id) => new ObjectId(id)) } })
+    .toArray();
+
+  const lineItems = images.map((image) => {
+    const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
+      image.watermarkedLocation
+    )}`;
     return {
       price_data: {
         currency: 'cad',
@@ -152,7 +166,7 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         product_data: {
           name: image.title,
           description: image.description,
-          images: [image.imageLocation],
+          images: [imageURL],
         },
       },
       quantity: 1,
@@ -174,19 +188,31 @@ app.post('/api/payment/create-checkout-session', async (req, res) => {
         : `http://localhost:3000/cancel`,
   });
 
-  const imageIDs = product.map((item) => new ObjectId(item._id));
-
   const newTransaction = {
     transactionId: session.id,
     price: parseFloat(session.amount_subtotal / 100),
     date: new Date(),
-    purchasedImages: imageIDs,
+    purchasedImages: imageIds.map((id) => new ObjectId(id)),
     status: 'pending payment',
+    email: email,
   };
-  await db.collection('transactions').insertOne(newTransaction);
+  const transaction = await db
+    .collection('transactions')
+    .insertOne(newTransaction);
 
-  //console.log("product");
-  //console.log(product);
+  if (authtoken) {
+    try {
+      const firebaseUser = await admin.auth().verifyIdToken(authtoken);
+      await db
+        .collection('users')
+        .findOneAndUpdate(
+          { uid: firebaseUser.uid },
+          { $push: { transactions: transaction.insertedId } }
+        );
+    } catch (e) {
+      return res.sendStatus(400);
+    }
+  }
 
   res.json({ id: session.id });
 });

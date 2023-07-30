@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { ObjectId } from 'mongodb';
-import { db } from '../db.js'; // Assuming db.js contains the database connection logic
+import { db } from '../db.js';
+import admin from '../firebase.js';
 import Jimp from 'jimp';
 
 const router = express.Router();
@@ -191,6 +192,14 @@ router.post(
       const originalImageName = req.file.filename;
       const originalImageExt = path.extname(originalImageName);
 
+      // Get the seller information from the request body
+      const { authtoken } = req.headers;
+      const firebaseUser = await admin.auth().verifyIdToken(authtoken);
+      const user = await db
+        .collection('users')
+        .findOne({ uid: firebaseUser.uid });
+      const seller = user._id;
+
       // Generate the watermarked image and save it to /public/images/WM
       const watermarkedFileName = `WM-${Date.now()}-${Math.floor(
         1e3 + Math.random() * 9 * 1e3
@@ -206,15 +215,18 @@ router.post(
       const aspectRatio = image.bitmap.width / image.bitmap.height;
 
       // Calculate the new width and height to fit inside a 600 by 600 box while maintaining aspect ratio
+      const DISPLAY_HEIGHT = 600;
+      const DISPLAY_WIDTH = 600;
+
       let newWidth, newHeight;
       if (aspectRatio >= 1) {
         // Landscape or square image
-        newWidth = 600;
-        newHeight = 600 / aspectRatio;
+        newWidth = DISPLAY_WIDTH;
+        newHeight = DISPLAY_WIDTH / aspectRatio;
       } else {
         // Portrait image
-        newWidth = 600 * aspectRatio;
-        newHeight = 600;
+        newWidth = DISPLAY_HEIGHT * aspectRatio;
+        newHeight = DISPLAY_HEIGHT;
       }
 
       // Resize the image to fit inside the 800 by 800 box
@@ -260,7 +272,7 @@ router.post(
       const imageDetails = {
         title: req.body.title,
         description: req.body.description,
-        seller: '', // Seller information here
+        seller: seller,
         likes: 0, // Initialize the likes to 0
         views: 0, // Initialize the views to 0
         status: 'Active', // Assuming the default status is 'Available'

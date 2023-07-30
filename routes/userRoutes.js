@@ -1,6 +1,7 @@
 import express from 'express';
 import admin from '../firebase.js'; // Assuming firebase.js is in the parent directory
 import { db } from '../db.js'; // Assuming db.js contains the database connection logic
+import { ObjectId } from 'mongodb';
 
 const router = express.Router();
 
@@ -48,6 +49,19 @@ router.get('/:uid', async (req, res) => {
 
     // Create a new user collection
     if (user) {
+      const cartObjects = await db
+        .collection('images')
+        .find({ _id: { $in: user.cart.map((id) => new ObjectId(id)) } })
+        .toArray();
+      const likeObjects = await db
+        .collection('images')
+        .find({ _id: { $in: user.likes.map((id) => new ObjectId(id)) } })
+        .toArray();
+      const transactionObjects = await db
+        .collection('transactions')
+        .find({ _id: { $in: user.transactions.map((id) => new ObjectId(id)) } })
+        .toArray();
+
       const currentUser = {
         email: user.email,
         firstName: user.firstName,
@@ -55,9 +69,9 @@ router.get('/:uid', async (req, res) => {
         phone: user.phone,
         address: user.address,
         role: user.role,
-        cart: user.cart,
-        likes: user.likes,
-        transaction: user.transaction,
+        cart: cartObjects,
+        likes: likeObjects,
+        transactions: transactionObjects,
       };
 
       // return currentUser
@@ -86,7 +100,7 @@ router.post('/update', async (req, res) => {
       phone,
       address,
       cart,
-      transaction,
+      transactions,
       likes,
     } = req.body;
 
@@ -100,9 +114,11 @@ router.post('/update', async (req, res) => {
           ...(lastName && { lastName }),
           ...(phone && { phone }),
           ...(address && { address }),
-          ...(cart && { cart }),
-          ...(transaction && { transaction }),
-          ...(likes && { likes }),
+          cart: cart.map((image) => new ObjectId(image._id)),
+          likes: likes.map((image) => new ObjectId(image._id)),
+          transactions: transactions.map(
+            (transaction) => new ObjectId(transaction._id)
+          ),
         },
       },
       // Set returnOriginal option to false to get the updated document
