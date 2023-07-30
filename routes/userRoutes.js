@@ -1,6 +1,6 @@
 import express from 'express';
-import admin from '../firebase.js'; // Assuming firebase.js is in the parent directory
-import { db } from '../db.js'; // Assuming db.js contains the database connection logic
+import admin from '../firebase.js';
+import { db } from '../db.js';
 import { ObjectId } from 'mongodb';
 
 const router = express.Router();
@@ -49,14 +49,56 @@ router.get('/:uid', async (req, res) => {
 
     // Create a new user collection
     if (user) {
+      // get images infromation in user cart from database
       const cartObjects = await db
         .collection('images')
         .find({ _id: { $in: user.cart.map((id) => new ObjectId(id)) } })
         .toArray();
+      // set format of user cart
+      cartObjects = cartObjects.map((image) => {
+        const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
+          image.watermarkedLocation
+        )}`;
+        const returnImage = {
+          _id: image._id,
+          title: image.title,
+          description: image.description,
+          seller: image.seller,
+          likes: image.likes,
+          views: image.views,
+          status: image.status,
+          imageLocation: imageURL,
+          tags: image.tags,
+          price: image.price,
+        };
+        return returnImage;
+      });
+
+      // get images infromation in user likes from database
       const likeObjects = await db
         .collection('images')
         .find({ _id: { $in: user.likes.map((id) => new ObjectId(id)) } })
         .toArray();
+      // set format of user likes
+      likeObjects = likeObjects.map((image) => {
+        const imageURL = `https://image-store-app-api.onrender.com/images/wm/${path.basename(
+          image.watermarkedLocation
+        )}`;
+        const returnImage = {
+          _id: image._id,
+          title: image.title,
+          description: image.description,
+          seller: image.seller,
+          likes: image.likes,
+          views: image.views,
+          status: image.status,
+          imageLocation: imageURL,
+          tags: image.tags,
+          price: image.price,
+        };
+        return returnImage;
+      });
+
       const transactionObjects = await db
         .collection('transactions')
         .find({ _id: { $in: user.transactions.map((id) => new ObjectId(id)) } })
