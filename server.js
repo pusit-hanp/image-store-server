@@ -47,7 +47,6 @@ app.post(
       return;
     }
 
-    let email;
     let status = 'Completed';
     let transId;
 
@@ -62,7 +61,7 @@ app.post(
         const checkoutSessionCompleted = event.data.object;
         //console.log("Checkout session completed");
         //console.log(checkoutSessionCompleted);
-        email = checkoutSessionCompleted.customer_details.email;
+        //email = checkoutSessionCompleted.customer_details.email;
         transId = checkoutSessionCompleted.id;
         //console.log("transId");
         //console.log(transId);
@@ -72,7 +71,6 @@ app.post(
             { transactionId: transId },
             {
               $set: {
-                ...(email && { email }),
                 ...(status && { status }),
               },
             },
@@ -87,14 +85,14 @@ app.post(
 
         const mailData = {
           from: 'imagecapstone@gmail.com',
-          to: email,
+          to: transactionInfo.value.email,
           subject: 'Image Store Order',
           text: 'Thanks for your order! Enjoy your images',
           attachments: createAttachments(imagePaths),
         };
 
-        console.log('mailData');
-        console.log(mailData);
+        //console.log('mailData');
+        //console.log(mailData);
 
         mailSetUp.sendMail(mailData, function (error, info) {
           if (error) {
