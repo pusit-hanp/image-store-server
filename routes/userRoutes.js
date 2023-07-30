@@ -2,6 +2,7 @@ import express from 'express';
 import admin from '../firebase.js';
 import { db } from '../db.js';
 import { ObjectId } from 'mongodb';
+import path from 'path';
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ router.get('/:uid', async (req, res) => {
     // Create a new user collection
     if (user) {
       // get images infromation in user cart from database
-      const cartObjects = await db
+      let cartObjects = await db
         .collection('images')
         .find({ _id: { $in: user.cart.map((id) => new ObjectId(id)) } })
         .toArray();
@@ -75,7 +76,7 @@ router.get('/:uid', async (req, res) => {
       });
 
       // get images infromation in user likes from database
-      const likeObjects = await db
+      let likeObjects = await db
         .collection('images')
         .find({ _id: { $in: user.likes.map((id) => new ObjectId(id)) } })
         .toArray();
