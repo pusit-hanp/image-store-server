@@ -2,8 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { ObjectId } from 'mongodb';
-import { db } from '../db.js';
-import admin from '../firebase.js';
+import { db } from '../configs/db.js';
+import admin from '../configs/firebase.js';
 import Jimp from 'jimp';
 
 const router = express.Router();
