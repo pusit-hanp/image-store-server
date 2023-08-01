@@ -2,8 +2,8 @@ import express from 'express';
 import Stripe from 'stripe';
 import { ObjectId } from 'mongodb';
 import path from 'path';
-import { db } from '../db.js';
-import admin from '../firebase.js';
+import { db } from '../configs/db.js';
+import admin from '../configs/firebase.js';
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import Stripe from 'stripe';
 import nodemailer from 'nodemailer';
-import { db } from '../db.js';
+import { db } from '../configs/db.js';
 
 const router = express.Router();
 

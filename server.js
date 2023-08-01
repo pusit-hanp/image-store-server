@@ -1,8 +1,8 @@
 import express from 'express';
 import 'dotenv/config';
 import cors from 'cors';
-import admin from './firebase.js';
-import { db, connectToDb } from './db.js';
+import admin from './configs/firebase.js';
+import { db, connectToDb } from './configs/db.js';
 
 import userRoutes from './routes/userRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';

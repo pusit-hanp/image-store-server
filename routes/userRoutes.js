@@ -1,6 +1,6 @@
 import express from 'express';
-import admin from '../firebase.js';
-import { db } from '../db.js';
+import admin from '../configs/firebase.js';
+import { db } from '../configs/db.js';
 import { ObjectId } from 'mongodb';
 import path from 'path';
 
