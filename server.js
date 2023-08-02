@@ -8,6 +8,7 @@ import userRoutes from './routes/userRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use(async (req, res, next) => {
 app.use('/api/images', imageRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Error handling middleware (optional)
 app.use((err, req, res, next) => {
