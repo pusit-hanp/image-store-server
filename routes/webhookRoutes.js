@@ -2,6 +2,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import nodemailer from 'nodemailer';
 import { db } from '../configs/db.js';
+import path from "path";
 
 const router = express.Router();
 
@@ -121,10 +122,10 @@ router.post(
 );
 
 function createAttachments(imagePaths) {
-  return imagePaths.map((path) => {
+  return imagePaths.map((imageLocation) => {
     return {
-      filename: path,
-      path: `${process.env.SERVER_URL}${process.env.IMAGE_RAW}${path}`,
+      filename: path.basename(imageLocation),
+      path: `${process.env.SERVER_URL}${process.env.IMAGE_RAW}${path.basename(imageLocation)}`,
     };
   });
 }
